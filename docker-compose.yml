@@ -5,14 +5,17 @@ services:
     container_name: kafka
     hostname: kafka
     ports:
-      - "9092:9092"
+      - "9092:9092"    # for other containers (Control Center -> kafka:9092)
+      - "29092:29092"  # for host machine apps (Spring Boot -> localhost:29092)
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      # Advertise localhost for host apps (Spring Boot), 
-      # but Control Center will use "kafka:9092" inside Docker
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # define 2 listeners: one for Docker network, one for host
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_HOST://:29092,CONTROLLER://:9093
+      # advertise both host and container addresses
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      # map the custom listener names to protocol
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       CLUSTER_ID: z8HX6T5bTQ6eWkD1ezjA1g
@@ -29,7 +32,7 @@ services:
     ports:
       - "9021:9021"
     environment:
-      # Important: inside Docker network, use service name "kafka"
+      # inside Docker network, talk to kafka:9092
       CONTROL_CENTER_BOOTSTRAP_SERVERS: kafka:9092
       CONTROL_CENTER_REPLICATION_FACTOR: 1
       CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
